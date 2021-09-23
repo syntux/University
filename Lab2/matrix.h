@@ -21,4 +21,5 @@ void initMatrix(matrix *A, int rows, int cols);
 //void sendData(matrix A, int *arr, MPI_Comm world); 
 int *sendData(matrix A, MPI_Comm world); 
 matrix addition(matrix A, matrix B, MPI_Comm world); 
+matrix subtraction(matrix A, matrix B, MPI_Comm world);
 #endif

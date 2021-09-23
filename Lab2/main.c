@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
 	MPI_Comm_rank(world, &rank);
 
 
-	int n = 4, m = 4, i, j;
+	int n = 13, m = 2, i, j;
 
 	srand(time(0));
 	matrix A, B, C;
@@ -24,8 +24,8 @@ int main(int argc, char **argv) {
 		initMatrix(&B, n, m); // can change
 		for (i = 0; i < n; i++) {
 			for (j = 0; j < m; j++) {
-				ACCESS(A,i,j) = rand() % 100;
-				ACCESS(B,i,j) = rand() % 100;
+				ACCESS(A,i,j) = rand() % 10;
+				ACCESS(B,i,j) = rand() % 10;
 				printf("%4d ", ACCESS(A, i, j));
 				//printf("%4d ", ACCESS(B, i, j));
 			}
@@ -70,7 +70,8 @@ int main(int argc, char **argv) {
 	//printf("\n\n\n\n--\n");
 //	sendData(B, arr2, world);
 
-	C = addition(A, B, world);
+	//C = addition(A, B, world);
+	C = subtraction(A, B, world);
 	
 
 	if (rank == 0) {
