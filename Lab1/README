@@ -1,0 +1,10 @@
+	You can make both the prime program and hello program using make all. Or you can use make hello and make prime seperately. Run mpirun -n 3 ./hello where 3 can be the amount of nodes. And run mpirun -n 8 ./prime 23455023425 where 8 can be the amount of nodes and 23455023425 is the number tested for primality.
+
+
+b) I tried to gain performance by using MPI_Abort but it only worked as intented sometimes. Sometimes it would just not print anything and other times it would. I could also try to gain performance by using the loop mentioned in class. Lastly I could break the loop when a factor is found but I did not want to. 
+
+c) I do not know if it perfectly divides the time but it may. With 4 nodes it takes an average of 12.545 seconds in real time while 8 nodes takes an average of 6.474s. So double the nodes to half the time.  
+
+d) The reason you only need to test up to the square root is because all numbers have at least 1 factor pair (primes have 1). These factor pairs are like 1 x 12, 2 x 6, and 3 x 4, for the number 12. The factor pairs less than or equal to the square root only need to be tested because they will already be paired up meaning you already have the other factor. So, for the example above there is no need to test for 4 after 3 because 3 pairs with 4 and square root of 12 is 3 (rounded down).   
+
+e) The code could be improved in terms of efficiency if there was a way to end every node's loop once a factor is found from any of them. MPI_Abort did not work for that correctly. Another way would be to use collectives.   
