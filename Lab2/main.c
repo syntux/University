@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
 	MPI_Comm_rank(world, &rank);
 
 
-	int n = 13, m = 2, i, j;
+	int n = 4, m = 6, i, j;
 
 	srand(time(0));
 	matrix A, B, C;
@@ -93,12 +93,31 @@ int main(int argc, char **argv) {
 		}
 		printf("C-----\n");
 	}
+	matrix CT;
 
+	if (rank == 0) {
+		CT = transpose(A);
+		for (i = 0; i < A.cols; i++) {
+			for (j = 0; j < A.rows; j++) {
+				//printf("%4d ", ACCESS(CT, i, j));
+				printf("%4d ", ACCESS(CT, i, j));
+				
+			}
+			printf("\n");
+		}
+		printf("CT-----\n");
+	}
+	else {
+		CT.data = NULL;
+		CT.rows = 0;
+		CT.cols = 0;
+	}
 	free(A.data);
 	free(B.data);
 	free(C.data);
 	//free(arr);
 	//free(arr2);
+	free(CT.data);
 	MPI_Finalize();
 
 	return 0;

@@ -197,3 +197,23 @@ matrix subtraction(matrix A, matrix B, MPI_Comm world) {
 	free(arr2);
 	return C;
 }
+
+matrix transpose(matrix A) {
+//	ACESSS(
+
+	matrix T;
+	initMatrix(&T, A.cols, A.rows);
+	
+	for (int i = 0; i < A.rows; i++) {
+		for (int j = 0; j < A.cols; j++) {
+			//ACCESS(T, j, i) = ACESS(A, i, j);		
+			//printf("ele = %d\n", A.data[A.cols * i + j]);
+			T.data[A.rows*j+i] = A.data[A.cols * i + j];
+			//printf("teleerlweqr = %d\n", A.data[A.cols * i + j]);
+			//ACESS(T, j, i) = 0;
+		}
+	}	
+	//ACCESS(A, i, j) 
+	//
+	return T;
+}
