@@ -217,3 +217,70 @@ matrix transpose(matrix A) {
 	//
 	return T;
 }
+
+matrix multiplication(matrix A, matrix B) {
+	int worldSize, rank;
+
+	MPI_Comm_size(world, &worldSize);
+	MPI_Comm_rank(world, &rank);
+	
+	//int *arr = NULL, *arr2 = NULL;
+
+	//arr = sendData(A, world);
+	//arr2 = sendData(B, world);
+
+	matrix C;
+	initMatrix(&C, A.rows, B.cols); 
+	
+	matrix BT;
+	initMatrix(&BT, B.cols, B.rows); 
+
+
+/*
+	int *sendcounts = malloc(worldSize*sizeof(int));
+	int start = A.rows / worldSize;
+
+	for (int i = 0; i < worldSize; i++) {
+		sendcounts[i] = start;
+	}
+	for (int i = 0; i < A.rows%worldSize; i++) {
+		sendcounts[i]++;
+	}
+	for (int i = 0; i < worldSize; i++) {
+		sendcounts[i] *= A.cols;
+	}
+
+	int *displ = malloc(worldSize*sizeof(int));
+	displ[0] = 0;
+	for (int i = 1; i < worldSize; i++) {
+		displ[i] = displ[i-1] + sendcounts[i-1];
+	}
+	int *results = malloc(sendcounts[rank]*sizeof(int));	
+
+	for (int i = 0; i < sendcounts[rank]; i++) {
+		results[i] = arr[i] - arr2[i];
+	}
+
+	MPI_Gatherv(
+		results,
+		sendcounts[rank],
+		MPI_INT,
+		C.data,
+		sendcounts,
+		displ,
+		MPI_INT,
+		0,		
+		world	
+	);
+
+*/
+	//free(sendcounts);
+	//free(displ);
+	
+	//free (results);
+
+	//free(arr);
+	//free(arr2);
+	return C;
+
+}

@@ -27,4 +27,6 @@ matrix addition(matrix A, matrix B, MPI_Comm world);
 matrix subtraction(matrix A, matrix B, MPI_Comm world);
 
 matrix transpose(matrix A); 
+
+matrix multiplication(matrix A, matrix B) {
 #endif
