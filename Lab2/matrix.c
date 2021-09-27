@@ -233,10 +233,20 @@ matrix multiplication(matrix A, matrix B) {
 	initMatrix(&C, A.rows, B.cols); 
 	
 	matrix BT;
-	initMatrix(&BT, B.cols, B.rows); 
 
+	if (rank == 0) {
+		BT = transpose(B);
+	}
 
-/*
+	MPI_Bcast(
+		BT,	
+		BT.rows*BT.cols,
+		MPI_INT,
+		0,
+		world
+	);
+	
+
 	int *sendcounts = malloc(worldSize*sizeof(int));
 	int start = A.rows / worldSize;
 
@@ -255,12 +265,33 @@ matrix multiplication(matrix A, matrix B) {
 	for (int i = 1; i < worldSize; i++) {
 		displ[i] = displ[i-1] + sendcounts[i-1];
 	}
-	int *results = malloc(sendcounts[rank]*sizeof(int));	
 
-	for (int i = 0; i < sendcounts[rank]; i++) {
-		results[i] = arr[i] - arr2[i];
+	int arr* = NULL;
+	arr = sendData(A, world);
+
+	int amount = 0;
+	while (amount < sendcounts[rank] / start) {
+		for (int i = 0; i < ; i++) {
+			for (int j = 0; j < A.cols; j++) {
+
+			}
 	}
 
+	//int *results = malloc(sendcounts[rank]*sizeof(int));	
+
+	//for (int i = 0; i < sendcounts[rank]; i++) {
+	//	results[i] = arr[i] - arr2[i];
+	//}
+
+//	for (int i = 0; i < sendcounts[rank]; i++) {
+//		[i] = arr[i] - arr2[i];
+//	}
+	
+
+	
+//	T.data[A.rows*j+i] = A.data[A.cols * i + j];
+
+	/*
 	MPI_Gatherv(
 		results,
 		sendcounts[rank],
@@ -272,15 +303,16 @@ matrix multiplication(matrix A, matrix B) {
 		0,		
 		world	
 	);
+	*/
 
-*/
-	//free(sendcounts);
-	//free(displ);
+	free(sendcounts);
+	free(displ);
 	
 	//free (results);
 
 	//free(arr);
 	//free(arr2);
+	free(BT.data);
 	return C;
 
 }
