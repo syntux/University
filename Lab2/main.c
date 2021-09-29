@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
 	MPI_Comm_rank(world, &rank);
 
 
-	int n = 3, m = 3, i, j;
+	int n = 4, m = 3, i, j;
 
 	srand(time(0));
 	matrix A, B, C;
@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
 			}
 			printf("\n");
 		}
-		printf("A-----\n");
+		printf("^A-----\n");
 	}
 	else {
 		A.data = NULL;
@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
 			}
 			printf("\n");
 		}
-		printf("B-----\n");
+		printf("^B-----\n");
 	}
 	
 	if (rank == 0) {
@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
 			}
 			printf("\n");
 		}
-		printf("C-----\n");
+		printf("^C SUBTRACTION-----\n");
 	}
 	matrix CA;
 
@@ -118,7 +118,7 @@ int main(int argc, char **argv) {
 
 
 	int	multiRows = 3;
-	int	multiCols = 20;
+	int	multiCols = 5;
 	if (rank == 0) {
 		free(C.data);
 		free(B.data);
@@ -165,11 +165,58 @@ int main(int argc, char **argv) {
 			}
 			printf("\n");
 		}
-		printf("C MULTI-----\n");
+		printf("C MULTI ANSWER-----\n");
 	}
 
+	n = 4100;
+	m = 4000;
+
+	multiRows = 4000;
+	multiCols = 4200;
+
+	free(A.data);
+	free(B.data);
+	free(C.data);	
 
 
+	if (rank == 0) {
+		 
+
+		initMatrix(&A, n, m);
+		for (i = 0; i < n; i++) {
+			for (j = 0; j < m; j++) {
+				ACCESS(A,i,j) = rand() % 100 + 1;
+			}
+		}
+		initMatrix(&B, multiRows, multiCols); 
+		for (i = 0; i < multiRows; i++) {
+			for (j = 0; j < multiCols; j++) {
+				ACCESS(B,i,j) = rand() % 100 + 1;
+			}
+		}
+		//printf("NEW B-----\n");
+	}
+	else {
+		A.data = NULL;
+		A.rows = n;
+		A.cols = m;
+
+		B.data = NULL;
+		B.rows = multiRows;
+		B.cols = multiCols;
+
+		C.data = NULL;
+		C.rows = A.rows;
+		C.cols = B.cols;
+	}
+
+	double t1 = MPI_Wtime();	
+	C = multiplication(A, B, world); 
+	double t2 = MPI_Wtime();
+
+	if (rank == 0) {	
+		printf("The (%d x %d) * (%d x %d) took %f seconds\n", A.rows, A.cols, B.rows, B.cols, t2-t1);
+	}
 
 	free(A.data);
 	free(B.data);
