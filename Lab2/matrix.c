@@ -272,7 +272,7 @@ matrix multiplication(matrix A, matrix B, MPI_Comm world) {
 */
 //////////////////////////////////////
 	
-	int *arr = NULL, *arr2 = NULL;
+	int *arr = NULL;
 
 	arr = sendData(A, world);
 
@@ -316,7 +316,7 @@ matrix multiplication(matrix A, matrix B, MPI_Comm world) {
 
 	//int count = displ[rank];
 	//
-	arr2 = malloc(getRows * A.rows*sizeof(int));
+	//int *arr2 = malloc(getRows * B.cols*sizeof(int));
 	int count = 0;
 
 	
@@ -328,13 +328,15 @@ matrix multiplication(matrix A, matrix B, MPI_Comm world) {
 	
 	//if (rank == 0) {
 	for (int i = 0; i < worldSize; i++) {
-		newSend[i] = sendcounts[i] / A.cols * A.rows; 
+		newSend[i] = sendcounts[i] / A.cols * B.cols; 
 		//printf("newsend[i] %d\n", newSend[i]);
 	}
 	//}
+	int *arr2;
+	arr2 = malloc(newSend[rank]*sizeof(int));
 	if (rank == 0) {
-		for (int i = 0; i < worldSize; i++) {
-	//	printf("newsend[i] %d\n", newSend[i]);
+		for (int i = 0; i < getRows*B.cols; i++) {
+		//printf("arr2[%d] %d\n", i, arr[i]);
 	}
 	}
 
@@ -344,17 +346,19 @@ matrix multiplication(matrix A, matrix B, MPI_Comm world) {
 		newDispl[i] = newDispl[i-1] + newSend[i-1];
 	}
 
+	printf("rank: %d BT.rows %d BT.cols %d\n", rank, BT.rows, BT.cols);
 	int sum;
 	for (int i = 0; i < getRows; i++) {
 		for (int j = 0; j < BT.rows; j++) {
+			//printf("JJJJJJJJJJJJJJ: %d\n", j);
 			sum = 0;
 			for (int k = 0; k < A.cols; k++) {
-				printf("COUNT: %d RANK %d k %d\n", count, rank, BT.rows);
+				//printf("COUNT: %d RANK %d k %d\n", count, rank, BT.rows);
 				//sum += ACCESS(temp,i,k) * ACCESS(BT, j, k);
 				sum += arr[(i*A.cols)+k] * ACCESS(BT, j, k);
 				//printf("NUM %d Arr %d\n", i * BT.cols + k, arr[(i*BT.cols+k)]);
 //				printf("arr[] %d *  ACCESS %d j - %d k - %d i - %d\n", arr[(i*A.cols)+k], ACCESS(BT, j, k), j, k, i);
-//				printf("SUM: %d\n i %d j %d k %d arr %d BT %d\n", sum, i, j, k, arr[(i*A.cols)+k], ACCESS(BT, j, k));
+				//printf("SUM: %d\n i %d j %d k %d arr %d BT %d\n", sum, i, j, k, arr[(i*A.cols)+k], ACCESS(BT, j, k));
 				//printf("i*A.cols+k %d --- rank %d\n", (i*A.cols)+k, rank);
 				//printf("j [%d] i[%d] rank - %d\n", j, k, rank);
 				//printf("[%d] rank %d\n", ACCESS(BT, j, k), rank);
@@ -366,6 +370,11 @@ matrix multiplication(matrix A, matrix B, MPI_Comm world) {
 		}
 		//ACCESS(C, j, k) = sum;
 	}
+	/*
+	for (int i = 0; i < newSend[rank]; i++) {
+		printf("ARR: %d rank %d\n", arr2[i], rank);
+	}
+*/
 
 //	for (int i = 0; i < worldSize; i++) {
 //		printf("DISPL %d\n", newDispl[rank]);
