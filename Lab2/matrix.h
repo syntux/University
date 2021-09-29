@@ -8,7 +8,6 @@
 
 #define INDEX(i, j, n, m) i*m + j
 #define ACCESS(A, i, j) A.data[INDEX(i, j, A.rows, A.cols)]
-//#define PACCESS(A, i, j) A->data[INDEX(i, j, A->rows, A->cols)]
 
 typedef struct matrix {
 	int rows;
@@ -28,5 +27,5 @@ matrix subtraction(matrix A, matrix B, MPI_Comm world);
 
 matrix transpose(matrix A); 
 
-matrix multiplication(matrix A, matrix B) {
+matrix multiplication(matrix A, matrix B, MPI_Comm world); 
 #endif

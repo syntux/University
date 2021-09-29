@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
 	MPI_Comm_rank(world, &rank);
 
 
-	int n = 4, m = 6, i, j;
+	int n = 4, m = 3, i, j;
 
 	srand(time(0));
 	matrix A, B, C;
@@ -24,8 +24,11 @@ int main(int argc, char **argv) {
 		initMatrix(&B, n, m); // can change
 		for (i = 0; i < n; i++) {
 			for (j = 0; j < m; j++) {
-				ACCESS(A,i,j) = rand() % 10;
-				ACCESS(B,i,j) = rand() % 10;
+				//ACCESS(A,i,j) = rand() % 10 + 1;
+				//ACCESS(B,i,j) = rand() % 10 + 1;
+
+				ACCESS(A,i,j) = 1;
+				ACCESS(B,i,j) = 1;
 				printf("%4d ", ACCESS(A, i, j));
 				//printf("%4d ", ACCESS(B, i, j));
 			}
@@ -105,13 +108,68 @@ int main(int argc, char **argv) {
 			}
 			printf("\n");
 		}
-		printf("CA-----\n");
+		printf("AT-----\n\n\n");
 	}
 	else {
 		CA.data = NULL;
-		CA.rows = 0;
-		CA.cols = 0;
+		CA.rows = A.cols;
+		CA.cols = A.rows;
 	}
+
+
+	if (rank == 0) {
+		free(C.data);
+		free(B.data);
+
+		initMatrix(&B, 3, 4);
+		for (i = 0; i < 3; i++) {
+			for (j = 0; j < 4; j++) {
+				//ACCESS(B,i,j) = rand() % 10 + 1;
+				ACCESS(B,i,j) = 1;
+				printf("%4d ", ACCESS(B, i, j));
+			}
+			printf("\n");
+		}
+		printf("NEW B-----\n");
+
+		//initMatrix(&C, 4, 4);
+	}
+	else {
+		B.data = NULL;
+		B.rows = 3;
+		B.cols = 4;
+		C.data = NULL;
+		C.rows = 4;
+		C.cols = 4;
+	}
+	
+	/*if (rank == 0) {
+		initMatrix(&C, 3, 4);
+		for (i = 0; i < 3; i++) {
+			for (j = 0; j < 4; j++) {
+				ACCESS(C,i,j) = rand() % 10 + 1;
+				printf("%4d ", ACCESS(B, i, j));
+			}
+			printf("\n");
+		}
+	}
+*/
+	C = multiplication(A, B, world); 
+
+	if (rank == 0) {
+		printf("IN MIAN?\n");
+		for (i = 0; i < 4; i++) {
+			for (j = 0; j < 4; j++) {
+				printf("%4d ", ACCESS(C, i, j));
+			}
+			printf("\n");
+		}
+		printf("C MULTI-----\n");
+	}
+
+
+
+
 	free(A.data);
 	free(B.data);
 	free(C.data);
