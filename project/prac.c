@@ -6,7 +6,8 @@
 //#include <crypt.h>
 
 int main() {
-	char password[] = "123test";
+	char password[] = "9A";
+	//char password[] = "aardvark123";
 
 	char salt[] = "$1$ab$";
 

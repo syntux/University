@@ -34,7 +34,47 @@ void freeParse(parse *txt) {
 	free(txt->password); 
 }
 
+void check(char *tmp4, parse *shadowList, int found[], FILE *res,MPI_File fh, MPI_Comm world) {
+	int worldSize; 
+	MPI_Comm_size(world, &worldSize);
+	int one = 1;
+
+	char *encrypt;
+	char r[100];
+	for (int scount = 0; scount < 11; scount++) {
+			if (found[scount] == 1) {
+				continue;
+			}
+			encrypt = crypt(tmp4, shadowList[scount].combine);
+		//	printf("ENCRYPT : %s\n", encrypt);
+			if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
+				found[scount] = 1;
+				printf("FOUND: %d\n", found[scount]);
+				fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp4);
+				printf("ANSWER Username: %s and password %s\n", shadowList[scount].username, tmp4);
+							
+				for (int nodes = 0; nodes < worldSize; nodes++) {
+					MPI_Send(&one, 1, MPI_INT, nodes, scount, world);	
+				}
+				memset(r, ' ', 100);
+				r[99] = '\n';
+				sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp4);
+									
+				int offset = (scount)*100*sizeof(char);
+								
+				MPI_File_write_at(
+					fh,
+					offset,
+					r,
+					100,
+					MPI_CHAR,
+					MPI_STATUS_IGNORE);
+			}
+	}
+}
+
 int main(int argc, char **argv) {
+
 
 
 	MPI_Init(&argc, &argv);
@@ -108,8 +148,9 @@ int main(int argc, char **argv) {
 			string = strtok(NULL, ",");
 		}	
 	}
-	printf("s: %d\n", saveState[0]);
+	//printf("s: %d\n", saveState[0]);
 	saveCount = saveState[0];
+//	printf("saveCount : %d\n", saveCount);
 	for (int i = 1; i <= 11; i++) {
 		found[i-1] = saveState[i];
 	}
@@ -123,6 +164,7 @@ int main(int argc, char **argv) {
 		MPI_Finalize();
 		return 1;
 	}
+	//if ((fileShadow = fopen("shadow", "r")) == NULL) {
 	if ((fileShadow = fopen("shadow", "r")) == NULL) {
 		fprintf(stderr, "No shadow\n");
 		MPI_Finalize();
@@ -231,8 +273,7 @@ typdef struct parse {
 	);
 	char r[100];
 
-	while (fscanf(fileWords, "%s", buf)) {
-		/*
+/*
 		if (rank != worldSize-1) {
 			if (count < end && count >= start) {
 
@@ -259,11 +300,21 @@ typdef struct parse {
 	//	for (int i = 0; i < 11; i++) {
 	//		MPI_Irecv(&found[i], 1, MPI_INT, MPI_ANY_SOURCE, i, world, &rqst[i]); 
 	//	}
-		
+	//
+	while ((fscanf(fileWords, "%s", buf)) == 1) {
+	//
+	
+		//printf("eval %d count: %d savecount %d\n",  count >= saveCount, count, saveCount);
 		char tmp[255];
 		int one = 1;
-		if (count >= saveCount && count % 30 == 0 && count != 0 && rank == 0) {
+		for (int i = 0; i < 11; i++) {
+				MPI_Test(&rqst[i], &found[i], MPI_STATUS_IGNORE);
+		}
+		//if (rank == 0) printf("count: %d\n", count);
+		if (count >= saveCount && count % 2 == 0 && count != 0 && rank == 0) {
+			//printf("HI\n");
 			 saveCount = count;
+
 			fseek(save, 0, SEEK_SET);
 			fprintf(save, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d", 
 											saveCount, found[0], found[1], found[2],
@@ -272,497 +323,514 @@ typdef struct parse {
 			fseek(save, 0, SEEK_SET);
 			//fprintf(save, "%d", saveCount);
 		}
+	
+		//printf("COUNT: %d saveCount %d\n", count, saveCount);
 		if (count % worldSize == rank && count >= saveCount) {
-			for (int i = 0; i < 11; i++) {
-				MPI_Test(&rqst[i], &found[i], MPI_STATUS_IGNORE);
-			}
-			//MPI_Irecv(&found[tag], 1, MPI_INT, MPI_ANY_SOURCE, tag, world, &req);
-			for (int i = 0; i < 10; i++) {
-				for (int j = 0; j < 10; j++) {
-					for (int k = 0; k < 10; k++) {
-						for (int v = 0; v < 10; v++) {
-							for (int scount = 0; scount < 11; scount++) {	
-								if (found[scount] == 1) {
-									continue;
-								}
-								char *encrypt;
-								if (k < 1 && j < 1 && i < 1) {
-									//if (v == 9) printf("num: %d\n", strcmp(crypt(tmp, shadowList[scount].combine), shadowList[count].password));
-									//if (v == 9) printf("%s tmp %s ANS: %s", encrypt, tmp, shadowList[scount].password);
-									//if (v == 9) printf("tmp: %s enc %s her %s\n", shadowList[count].password, crypt(tmp, shadowList[scount].combine), tmp);
-									//encrypt = crypt(tmp, shadowList[scount].combine);	
-									sprintf(tmp, "%d%s", v, buf);
-									encrypt = crypt(tmp, shadowList[scount].combine);
-										//printf("true : user %s\n", shadowList[scount].username);	
-										//printf("user: %s ENCRY: %s\n", shadowList[scount].password, encrypt);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
+		//	printf("COUNT: %d\n", count);
+		
+			int ind;
+			char *tmp4;
+			tmp4 = malloc(255*sizeof(char)); 
+			memset(tmp4, '\0', 255);
+			sprintf(tmp4, "0000%s", buf);
+			//printf("%s\n", tmp4);
+			char *tmp1; 
+			tmp1 = malloc(sizeof(char)*255); 
+			memset(tmp1, '\0', 255);
+			sprintf(tmp1, "%s0000", buf);
+			char *encrypt;
+			int size = strlen(tmp1);
+			for (int i = 0; i <= 9999; i++) {
+					if (i == 0) {
+//						printf("%s\n", (tmp4)+3);
+						check(tmp4+3, shadowList, found, res, fh, world);
 
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
-
-									sprintf(tmp, "%s%d", buf, v);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
-
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
-
-									sprintf(tmp, "%d%d%s", k, v, buf);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
-
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}	
-
-									sprintf(tmp, "%s%d%d", buf, k, v);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
-
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
+//						printf("%s\n", (tmp4)+2);
+						check(tmp4+2, shadowList, found, res, fh, world);
 
 
-									sprintf(tmp, "%d%d%d%s", j, k, v, buf);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
+//						printf("%s\n", (tmp4)+1);
+						check(tmp4+1, shadowList, found, res, fh, world);
 
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
+					//	printf("%s\n", (tmp4)+0);
+						check(tmp4+0, shadowList, found, res, fh, world);
 
-									sprintf(tmp, "%s%d%d%d", buf, j, k, v);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
+						
+						ind = strlen(tmp1)-3;
+						tmp1[ind] = '\0';
+					//	printf("%s\n", tmp1);
+						check(tmp1, shadowList, found, res, fh, world);
+						tmp1[ind] = '0';
 
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
+						ind = strlen(tmp1)-2;
+						tmp1[ind] = '\0';
+					//	printf("%s\n", (tmp1));
+						check(tmp1, shadowList, found, res, fh, world);
+						tmp1[ind] = '0';
+			
+						ind = strlen(tmp1)-1;
+						tmp1[ind] = '\0';
+					//	printf("%s\n", (tmp1));
+						check(tmp1, shadowList, found, res, fh, world);
+						tmp1[ind] = '0';
 
-									sprintf(tmp, "%d%d%d%d%s", i, j, k, v, buf);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
+					//	printf("%s\n", (tmp1));
+						check(tmp1, shadowList, found, res, fh, world);
 
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
+						continue;
+					}	
+				
+					if (i < 10) {
+						tmp4[3]++;	
+					//	printf("%s\n", (tmp4)+3);
+						check(tmp4+3, shadowList, found, res, fh, world);
+					//	printf("%s\n", (tmp4)+2);
+						check(tmp4+2, shadowList, found, res, fh, world);
+					//	printf("%s\n", (tmp4)+1);
+						check(tmp4+1, shadowList, found, res, fh, world);
+					//	printf("%s\n", (tmp4)+0);
+						check(tmp4+0, shadowList, found, res, fh, world);
 
-									sprintf(tmp, "%s%d%d%d%d", buf, i, j, k, v);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
+						/*
+						//printf("%s\n", (tmp1)+3);
+						//printf("%s\n", (tmp1)+2);
+						//printf("%s\n", (tmp1)+1);
+						//printf("%s\n", (tmp1)+0);
+						*/
 
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
-								}	
-								if (k >= 1 && j < 1 && i < 1) {
-									sprintf(tmp, "%d%d%s", k, v, buf);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
+						ind = strlen(tmp1)-3;
+						tmp1[ind] = '\0';
+						tmp1[ind-1]++;
+					//	printf("%s\n", tmp1);
+						check(tmp1, shadowList, found, res, fh, world);
 
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
 
-									sprintf(tmp, "%s%d%d", buf, k, v);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
 
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
+						tmp1[ind] = tmp1[ind-1];
+						tmp1[ind-1] = '0';
+						ind = strlen(tmp1)-2;
+						tmp1[ind] = '\0';
+					//	printf("%s\n", tmp1);
+						check(tmp1, shadowList, found, res, fh, world);
 
-									sprintf(tmp, "%d%d%d%s", j, k, v, buf);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
+						tmp1[ind] = tmp1[ind-1];
+						tmp1[ind-1] = '0';
+						ind = strlen(tmp1)-1;
+						tmp1[ind] = '\0';
+					//	printf("%s\n", tmp1);
+						check(tmp1, shadowList, found, res, fh, world);
 
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
 
-									sprintf(tmp, "%s%d%d%d", buf, j, k, v);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
+						tmp1[ind] = tmp1[ind-1];
+						tmp1[ind-1] = '0';
+					//	printf("%s\n", tmp1);
+						check(tmp1, shadowList, found, res, fh, world);
+					
 
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
+						tmp1[strlen(tmp1)-4] = tmp1[ind];
+						tmp1[ind] = '0';
+					
 
-									sprintf(tmp, "%d%d%d%d%s", i, j, k, v, buf);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
+						continue;
+					}
+					if (i % 10 == 0) {
+						tmp4[3] = '0';
+						tmp4[2]++;
 
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
-
-									sprintf(tmp, "%s%d%d%d%d", buf, i, j, k, v);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
-
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
-								}	
-								if (j >= 1 && i < 1) {
-									sprintf(tmp, "%d%d%d%s", j, k, v, buf);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
-
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
-
-									sprintf(tmp, "%s%d%d%d", buf, j, k, v);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
-
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
-
-									sprintf(tmp, "%d%d%d%d%s", i, j, k, v, buf);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
-
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
-									sprintf(tmp, "%s%d%d%d%d", buf, i, j, k, v);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
-
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
-								}	
-								if (i >= 1) {
-									sprintf(tmp, "%d%d%d%d%s", i, j, k, v, buf);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
-
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
-									//printf("%s\n", tmp);
-									sprintf(tmp,"%s%d%d%d%d", buf, i, j, k, v);
-									encrypt = crypt(tmp, shadowList[scount].combine);	
-									if ((strcmp(encrypt, shadowList[scount].password)) == 0) {
-										found[scount] = 1;
-										fprintf(res, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										for (int nodes = 0; nodes < worldSize; nodes++) {
-											MPI_Send(&one, 1, MPI_INT, nodes, scount, world);
-										}
-										memset(r, ' ', 100);
-										r[99] = '\n';
-										sprintf(r, "Username: %s and password %s\n", shadowList[scount].username, tmp);
-										int offset = (scount)*100*sizeof(char);
-
-										MPI_File_write_at(
-											fh,
-											offset,
-											r,
-											100,
-											MPI_CHAR,
-											MPI_STATUS_IGNORE);
-									}
-								}
+						if (i == 10) {
+							tmp1[size-4] = '1';
+							tmp1[size-2] = '\0';
+						}
+						else {
+						//	if (i == 20) printf("% 10 %c\n", tmp1[size-4]);
+							if (i < 100) {
+								tmp1[size-4]++;
+								tmp1[size-3] = '0';
+								tmp1[size-2] = '\0';
 							}
+							else if (i > 100 && i < 1000){
+								tmp1[size-3]++;
+								tmp1[size-2] = '0';
+								tmp1[size-1] = '\0';
+							}
+							else {
+								tmp1[size-2]++;
+								tmp1[size-1] = '0';
+							}
+						}
+						
+				}
+				else {
+					tmp4[3]++;
+
+					//if (i == 11) printf("ELSE %c\n", tmp1[size-3]);
+					//if (i > 100) tmp1[size-2]++;	
+					//else tmp1[size-3]++;
+					
+					if (i < 100) {
+						tmp1[size-3]++;
+					}
+					else if (i > 100 && i < 1000) {
+						tmp1[size-2]++;
+					}
+					else {
+						tmp1[size-1]++;
+					}
+				}
+				if (i >= 10 && i < 100) {
+					//printf("HERE? %s\n", (tmp4)+2);
+					check(tmp4+2, shadowList, found, res, fh, world);
+					//printf("%s\n", (tmp4)+1);
+					check(tmp4+1, shadowList, found, res, fh, world);
+					//printf("%s\n", (tmp4)+0);
+					check(tmp4+0, shadowList, found, res, fh, world);
+
+					
+
+
+					//printf("%s\n", tmp1);
+					check(tmp1, shadowList, found, res, fh, world);
+
+					tmp1[size-2] = tmp1[size-3];
+					tmp1[size-1] = '\0';
+					tmp1[size-3] = tmp1[size-4];
+					tmp1[size-4] = '0';
+					//printf("%s\n", tmp1);
+					check(tmp1, shadowList, found, res, fh, world);
+
+					tmp1[size-1] = tmp1[size-2];
+					tmp1[size-2] = tmp1[size-3];
+					tmp1[size-3] = '0';
+					//printf("%s\n", tmp1);
+					check(tmp1, shadowList, found, res, fh, world);
+
+					// NO printf("%s\n", tmp1);
+					tmp1[size-3] = tmp1[size-1];
+					tmp1[size-1] = '0';
+					tmp1[size-4] = tmp1[size-2];
+					tmp1[size-2] = '\0';
+
+				}
+			
+				if (i % 100 == 0) {
+					tmp4[2] = '0';
+					tmp4[1]++;	
+
+					if (i == 100) {
+						tmp1[size-4] = '1';
+						tmp1[size-3] = '0';
+						tmp1[size-2] = '0';
+						tmp1[size-1] = '\0';
+					}
+					else {
+					//	if (i == 20) printf("% 10 %c\n", tmp1[size-4]);
+						if (i < 1000) {
+							tmp1[size-4]++;
+							tmp1[size-3] = '0';
+						}
+						else {
+							tmp1[size-3]++;
+							tmp1[size-2] = '0';
 						}
 					}
 				}
+				//else {
+					//tmp4[3]++;
+				//}
+				if (i >= 100 && i < 1000) {
+					//printf("%s\n", (tmp4)+1);
+					check(tmp4+1, shadowList, found, res, fh, world);
+					//printf("%s\n", (tmp4)+0);
+					check(tmp4+0, shadowList, found, res, fh, world);
+					
+
+					//printf("%s\n", tmp1);
+					check(tmp1, shadowList, found, res, fh, world);
+					
+					tmp1[size-1] = tmp1[size-2];
+					tmp1[size-2] = tmp1[size-3];
+					tmp1[size-3] = tmp1[size-4];
+					tmp1[size-4] = '0';
+					//printf("%s\n", tmp1);
+					check(tmp1, shadowList, found, res, fh, world);
+
+					tmp1[size-4] = tmp1[size-3];
+					tmp1[size-3] = tmp1[size-2];
+					tmp1[size-2] = tmp1[size-1];
+					tmp1[size-1] = '\0';
+				
+				}
+				if (i % 1000 == 0) {
+					tmp4[1] = '0';
+					tmp4[0]++;
+
+					if (i == 1000) {
+						tmp1[size-4] = '1';
+						tmp1[size-3] = '0';
+						tmp1[size-2] = '0';
+						tmp1[size-1] = '0';
+					}
+					else {
+						tmp1[size-4]++;
+						tmp1[size-3] = '0';
+					}
+
+				}
+				if (i >= 1000) {
+					//printf("%s\n", (tmp4)+0);
+					check(tmp4+0, shadowList, found, res, fh, world);
+		//			if (i > 1950 && i < 2010) printf("%s\n", tmp1);
+					//printf("%s\n", tmp1);
+					check(tmp1, shadowList, found, res, fh, world);
+				}
+			//}
+		//}
+		//	FOR LOOP ENDS HERE
 			}
-			//printf("rank %d and word %s\n", rank, buf);
-			
+		
+			free(tmp1);
+			free(tmp4);
+		// IF STATMENT
 		}
-	//	if (count == 50) break;
-		count++;
+
+		
+		// WHILE LOOP
 		if (count >= saveCount) saveCount++;
+		count++;
+	
 	}
-/*
-	for (i = 0; i < 235888; i++) {
-		//printf("%s\n", words[i]);
-		free(words[i]);
-	}
-*/
+				//	if (count == 50) break;
+		/*	int ind;
+			char *tmp4;
+			tmp4 = calloc('\0', 255); 
+			sprintf(tmp4, "0000%s", buf);
+			printf("%s\n", tmp4);
+			char *tmp1; 
+			tmp1 = calloc('\0', 255); 
+			sprintf(tmp1, "%s0000", buf);
+			char *encrypt;
+			int size = strlen(tmp1);
+			// TODO STRLEN WITH POINTER?
+			for (int i = 0; i <= 9999; i++) {
+					if (i == 0) {
+						//printf("%s\n", (tmp4)+3);
+						//printf("%s\n", (tmp4)+2);
+						//printf("%s\n", (tmp4)+1);
+						//printf("%s\n", (tmp4)+0);
+						//
+						ind = strlen(tmp1)-3;
+						tmp1[ind] = '\0';
+						//printf("%s\n", tmp1);
+						tmp1[ind] = '0';
 
-	/*
-	printf("Rank %d - ", rank);
-	for (int i = 0; i < 11; i++) {
-		printf("%d ", found[i]);
-	}
-	puts("");
-	*/
+						ind = strlen(tmp1)-2;
+						tmp1[ind] = '\0';
+						//printf("%s\n", (tmp1));
+						tmp1[ind] = '0';
+			
+						ind = strlen(tmp1)-1;
+						tmp1[ind] = '\0';
+						//printf("%s\n", (tmp1));
+						tmp1[ind] = '0';
 
+						//printf("%s\n", (tmp1));
+
+						continue;
+					}	
+				
+					if (i < 10) {
+						tmp4[3]++;	
+						//printf("%s\n", (tmp4)+3);
+						//printf("%s\n", (tmp4)+2);
+						//printf("%s\n", (tmp4)+1);
+						//printf("%s\n", (tmp4)+0);
+
+						//printf("%s\n", (tmp1)+3);
+						//printf("%s\n", (tmp1)+2);
+						//printf("%s\n", (tmp1)+1);
+						//printf("%s\n", (tmp1)+0);
+
+						ind = strlen(tmp1)-3;
+						tmp1[ind] = '\0';
+						tmp1[ind-1]++;
+						//printf("%s\n", tmp1);
+
+
+
+						tmp1[ind] = tmp1[ind-1];
+						tmp1[ind-1] = '0';
+						ind = strlen(tmp1)-2;
+						tmp1[ind] = '\0';
+						//printf("%s\n", tmp1);
+
+						tmp1[ind] = tmp1[ind-1];
+						tmp1[ind-1] = '0';
+						ind = strlen(tmp1)-1;
+						tmp1[ind] = '\0';
+						//printf("%s\n", tmp1);
+
+
+						tmp1[ind] = tmp1[ind-1];
+						tmp1[ind-1] = '0';
+						//printf("%s\n", tmp1);
+					
+
+						tmp1[strlen(tmp1)-4] = tmp1[ind];
+						tmp1[ind] = '0';
+					
+
+						continue;
+					}
+					if (i % 10 == 0) {
+						tmp4[3] = '0';
+						tmp4[2]++;
+
+						if (i == 10) {
+							tmp1[size-4] = '1';
+							tmp1[size-2] = '\0';
+						}
+						else {
+						//	if (i == 20) printf("% 10 %c\n", tmp1[size-4]);
+							if (i < 100) {
+								tmp1[size-4]++;
+								tmp1[size-3] = '0';
+								tmp1[size-2] = '\0';
+							}
+							else if (i > 100 && i < 1000){
+								tmp1[size-3]++;
+								tmp1[size-2] = '0';
+								tmp1[size-1] = '\0';
+							}
+							else {
+								tmp1[size-2]++;
+								tmp1[size-1] = '0';
+							}
+						}
+						
+				}
+				else {
+					tmp4[3]++;
+
+					//if (i == 11) printf("ELSE %c\n", tmp1[size-3]);
+					//if (i > 100) tmp1[size-2]++;	
+					//else tmp1[size-3]++;
+					
+					if (i < 100) {
+						tmp1[size-3]++;
+					}
+					else if (i > 100 && i < 1000) {
+						tmp1[size-2]++;
+					}
+					else {
+						tmp1[size-1]++;
+					}
+				}
+				if (i >= 10 && i < 100) {
+					//printf("%s\n", (tmp4)+2);
+					//printf("%s\n", (tmp4)+1);
+					//printf("%s\n", (tmp4)+0);
+
+					
+
+
+					//printf("%s\n", tmp1);
+
+					tmp1[size-2] = tmp1[size-3];
+					tmp1[size-1] = '\0';
+					tmp1[size-3] = tmp1[size-4];
+					tmp1[size-4] = '0';
+					//printf("%s\n", tmp1);
+
+					tmp1[size-1] = tmp1[size-2];
+					tmp1[size-2] = tmp1[size-3];
+					tmp1[size-3] = '0';
+					//printf("%s\n", tmp1);
+
+					//printf("%s\n", tmp1);
+					tmp1[size-3] = tmp1[size-1];
+					tmp1[size-1] = '0';
+					tmp1[size-4] = tmp1[size-2];
+					tmp1[size-2] = '\0';
+
+				}
+			
+				if (i % 100 == 0) {
+					tmp4[2] = '0';
+					tmp4[1]++;	
+
+					if (i == 100) {
+						tmp1[size-4] = '1';
+						tmp1[size-3] = '0';
+						tmp1[size-2] = '0';
+						tmp1[size-1] = '\0';
+					}
+					else {
+					//	if (i == 20) printf("% 10 %c\n", tmp1[size-4]);
+						if (i < 1000) {
+							tmp1[size-4]++;
+							tmp1[size-3] = '0';
+						}
+						else {
+							tmp1[size-3]++;
+							tmp1[size-2] = '0';
+						}
+					}
+				}
+				//else {
+					//tmp4[3]++;
+				//}
+				if (i >= 100 && i < 1000) {
+					//printf("%s\n", (tmp4)+1);
+					//printf("%s\n", (tmp4)+0);
+					
+
+					//printf("%s\n", tmp1);
+					
+					tmp1[size-1] = tmp1[size-2];
+					tmp1[size-2] = tmp1[size-3];
+					tmp1[size-3] = tmp1[size-4];
+					tmp1[size-4] = '0';
+					//printf("%s\n", tmp1);
+
+					tmp1[size-4] = tmp1[size-3];
+					tmp1[size-3] = tmp1[size-2];
+					tmp1[size-2] = tmp1[size-1];
+					tmp1[size-1] = '\0';
+				
+				}
+				if (i % 1000 == 0) {
+					tmp4[1] = '0';
+					tmp4[0]++;
+
+					if (i == 1000) {
+						tmp1[size-4] = '1';
+						tmp1[size-3] = '0';
+						tmp1[size-2] = '0';
+						tmp1[size-1] = '0';
+					}
+					else {
+						tmp1[size-4]++;
+						tmp1[size-3] = '0';
+					}
+
+				}
+				if (i >= 1000) {
+				//	printf("%s\n", (tmp4)+0);
+		//			if (i > 1950 && i < 2010) printf("%s\n", tmp1);
+					printf("%s\n", tmp1);
+				}
+		}
+
+		*/
+	//		count++;
+	//		if (count >= saveCount) saveCount++;
+	//		if (count >= saveCount) saveCount++;
+		//	free(tmp1);
+		//	free(tmp4);
+	//	}
+	//}
+
+		
 //	if (rank == 0) printf("test: %s\n", shadowList[1].salt);
 
 	//printf("testttt %s\n", shadowList[1].encrypted);
