@@ -606,7 +606,7 @@ matrix gjElim(matrix A, matrix B, MPI_Comm world) {
 		//printf("RANK %d and i %d\n", rank, i);
 		//printf("rank %d and LA %0.1f\n", rank, ACCESS(LA, count, i));
 		ACCESS(LB, count, 0) = ACCESS(LB, count, 0) / ACCESS(LA, count, i);
-		printf("RANK %d X %0.5f\n", rank, ACCESS(LB, count, 0));
+		//printf("RANK %d X %0.5f\n", rank, ACCESS(LB, count, 0));
 		ACCESS(LA, count, i) = ACCESS(LA, count, i) / ACCESS(LA, count, i);
 		count++;
 	}

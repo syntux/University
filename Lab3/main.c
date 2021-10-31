@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
 	MPI_Comm_rank(world, &rank);
 
 
-	int n = 3, m = 3, i, j;
+	int n = 6, m = 6, i, j;
 
 	srand(time(0));
 	matrix A, B, C;
@@ -93,9 +93,50 @@ int main(int argc, char **argv) {
 				printf("%0.1f ", ACCESS(C, j, 0));
 			}
 			printf("\n");
-		printf("C MULTI ANSWER-----\n");
+		printf("Ax MULTI ANSWER-----\n");
 	}
+	/*
+	n = atoi(argv[1]);
+	if (rank == 0) {
+		free(AC.data);
+		free(A.data);
+		free(B.data);
 
+
+		initMatrix(&A, n, n); 
+		initMatrix(&B, n, 1); 
+		
+		for (i = 0; i < n; i++) {
+			ACCESS(B, i, 0) = i+1;
+			for (j = 0; j < m; j++) {
+				ACCESS(A,i,j) = rand() % n + 1;
+			}
+		}
+		AC = copyMatrix(A);
+
+	}
+	else {
+		A.data = NULL;
+		A.rows = n;
+		A.cols = n;
+
+		B.data = NULL;
+		B.rows = n;
+		B.cols = 1;
+
+		AC.data = NULL;
+		AC.rows = A.rows;
+		AC.cols = AC.cols;
+	}
+	free(x.data);
+	double t1, t2;
+	t1 = MPI_Wtime();
+	x = gjElim(AC, B, world);
+	t2 = MPI_Wtime();
+
+	printf("Took %0.1f seconds for a %d x %d\n", t2-t1, n, n);
+	
+	*/
 	free(A.data);
 	free(B.data);
 	free(AC.data);
