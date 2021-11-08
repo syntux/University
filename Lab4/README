@@ -1,0 +1,8 @@
+	I am not sure whether my power method function is working correctly. Part 3 d) on the pdf is unclear for me but a, b, and c has been done. 
+
+	For Lab3 I tried to make my matrix multiplication faster by using a custom datatype but that somehow made it slower? I do not have files working for gauss jordan but since I have file input working for Lab4 porting it to that won't be too hard.
+
+	For Lab4 again I do not know what to do for the rest but the multiplication and normalize are all working. I need help understanding the rest. For now though to run this you need to make filewrite and then run it with mpirun -n 1 ./filewrite. Can use n up to 5. This will give you a random 5x5 matrix saved to a file called matrix.data. Now you want to make main and run main with mpirun -n 2 ./main (or n up to 5). This will show the matrix (printing may be off you may have to run a couple of times because race condition) and what rank has what (sub matrix). It will then print the norm and the corresponding x vector with 7 iterations. I do not have a converge limit since I do not know what converges.    
+
+
+	
